@@ -110,9 +110,20 @@
     e.preventDefault(); box.classList.remove("drag");
     if (e.dataTransfer.files.length) handle(Array.from(e.dataTransfer.files));
   });
-  if (root.Shiny) {
-    root.Shiny.addCustomMessageHandler("extract_status", msg => setStatus(msg));
-  } else {
-    document.addEventListener("shiny:connected", () => root.Shiny.addCustomMessageHandler("extract_status", msg => setStatus(msg)));
+  // CSV generado en R: el BOM hace que Excel lo abra como UTF-8 (tildes, €)
+  function downloadCsv(msg) {
+    const blob = new Blob(["\uFEFF" + msg.content], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = msg.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
+
+  function register() {
+    root.Shiny.addCustomMessageHandler("extract_status", msg => setStatus(msg));
+    root.Shiny.addCustomMessageHandler("download_csv", downloadCsv);
+  }
+  if (root.Shiny) register(); else document.addEventListener("shiny:connected", register);
 })(typeof window !== "undefined" ? window : this);

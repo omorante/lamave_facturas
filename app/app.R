@@ -93,7 +93,7 @@ server <- function(input, output, session) {
       div(class = "cards",
         div(class = "card", div(class = "k", "Facturas leídas"), div(class = "v", sum(inv$ok)),
             div(class = "s", sprintf("de %d archivos · %s", nrow(inv), span_txt))),
-        div(class = "card", div(class = "k", "Pagado en total"), div(class = "v", eur(sum(m$total_iva), 0)),
+        div(class = "card", div(class = "k", "Pagado a Ecoenergies"), div(class = "v", eur(sum(m$total_iva), 0)),
             div(class = "s", "IVA incluido")),
         div(class = "card", div(class = "k", "Peso del término fijo"), div(class = "v", pct(pfix, 0)),
             div(class = "s", sprintf("%d de %d meses por encima del 40 %%", over40, nrow(m)))),
@@ -102,17 +102,19 @@ server <- function(input, output, session) {
         div(class = "card", div(class = "k", "Por encima del 40 %"), div(class = "v", eur(sum(m$exceso_40_iva), 0)),
             div(class = "s", "el máximo del RD, IVA incluido"))
       ),
+      p(class = "note", tags$b("No incluye lo que pagas a través de la comunidad"),
+        " (mantenimiento de la subestación y electricidad del bombeo). Según los datos de un edificio del barrio, son aproximadamente entre 10 y 20 € más al mes por vivienda, según su tamaño. Depende de cada comunidad."),
       if (length(gaps) || length(multi) || n_excl) div(class = "box warn",
         h3("Revisa esto"),
         tags$ul(
           if (n_excl) tags$li(sprintf("%d archivo(s) no se han podido usar. El motivo está en la tabla de archivos, al final.", n_excl)),
           if (length(gaps)) tags$li(paste0("Faltan facturas de: ", paste(mes_label(gaps), collapse = ", "), ".")),
           if (length(multi)) tags$li(paste0("Hay más de una factura para: ", paste(mes_label(multi), collapse = ", "),
-                                            ". Puede ser una rectificación o un cobro duplicado: compruébalo."))
+                                            ". Se han sumado. Puede ser una rectificación o un cobro duplicado: compruébalo."))
         )
       ),
       div(class = "noprint", style = "margin-top:14px;",
-        downloadButton("csv", "Descargar tabla (CSV)", class = "btn-lamave"),
+        actionButton("csv", "Descargar tabla (CSV)", icon = icon("download"), class = "btn-lamave"),
         tags$button(class = "btn btn-lamave", onclick = "window.print()", icon("print"), "Imprimir o guardar en PDF")
       ),
       section("Mes a mes", "Cuánto pagas"),
@@ -132,7 +134,8 @@ server <- function(input, output, session) {
         p("Para cada mes se suman el término fijo (R2) y los términos variables de calor, frío y volumen (R1). El peso del fijo es el fijo dividido entre esa suma, sin IVA."),
         p("El RD 736/2020 (art. 6.4) dice que el coste variable debería situarse entre el 60 % y el 75 % del total; es decir, el fijo entre el 25 % y el 40 %. La Sentencia 262/2024 del Juzgado de Primera Instancia nº 13 de Barcelona aplicó a Ecoenergies el punto medio: el 32,5 %."),
         p("El exceso es la diferencia entre el fijo facturado y el que correspondería al 32,5 % (o al 40 %) del coste con el mismo consumo. Se suman todos los meses, también los que quedan por debajo del límite, que restan. Si hubo descuentos, se aplican en proporción."),
-        p("Cada factura se comprueba: sus conceptos tienen que sumar la base imponible, y la base más el IVA, el total. Si no cuadra, la factura no se usa y se indica el motivo."),
+        p("Cada factura se comprueba: sus conceptos tienen que sumar la base imponible, y la base más el IVA, el total. Si no cuadra, la factura no se usa y se indica el motivo. Si subes dos veces la misma factura, se cuenta una sola vez."),
+        p("Solo se tiene en cuenta lo facturado por Ecoenergies. Lo que se paga a través de la comunidad (mantenimiento de la subestación y electricidad del bombeo) no aparece en estas facturas."),
         p(tags$b("Es una estimación orientativa, no un dictamen jurídico."),
           " Ecoenergies sostiene que el RD 736/2020 no se aplica a su servicio, y la sentencia solo obliga en el caso de quien reclamó. Revisa los datos con tus facturas antes de usarlos en una reclamación.")
       ),
@@ -210,8 +213,7 @@ server <- function(input, output, session) {
       "Calor" = eur(m$calor), "Frío" = eur(m$frio + m$volumen),
       "Descuento" = ifelse(m$descuento != 0, eur(m$descuento), ""),
       "% fijo" = pct(m$pct_fijo), "Exceso 32,5 %" = eur(m$exceso_325),
-      "€/kWh calor" = num(m$precio_calor), "€/kWh frío" = num(m$precio_frio),
-      "Facturas" = m$n_facturas, check.names = FALSE)
+      "€/kWh calor" = num(m$precio_calor), "€/kWh frío" = num(m$precio_frio), check.names = FALSE)
   }
 
   output$t_mes <- renderTable({
@@ -221,7 +223,7 @@ server <- function(input, output, session) {
       "Calor" = eur(sum(m$calor)), "Frío" = eur(sum(m$frio + m$volumen)),
       "Descuento" = ifelse(sum(m$descuento) != 0, eur(sum(m$descuento)), ""),
       "% fijo" = pct(100 * sum(m$fijo) / sum(m$bruto)), "Exceso 32,5 %" = eur(sum(m$exceso_325)),
-      "€/kWh calor" = "", "€/kWh frío" = "", "Facturas" = sum(m$n_facturas), check.names = FALSE))
+      "€/kWh calor" = "", "€/kWh frío" = "", check.names = FALSE))
     if (all(m$descuento == 0)) tab$Descuento <- NULL
     if (all(is.na(m$precio_frio))) tab$`€/kWh frío` <- NULL
     tab
@@ -229,25 +231,29 @@ server <- function(input, output, session) {
 
   output$t_arch <- renderTable({
     inv <- parsed()$invoices
-    data.frame("Archivo" = inv$file, "Factura" = ifelse(is.na(inv$number), "", inv$number),
+    # Sin nombres de archivo: pueden llevar el nombre o la dirección de quien sube las facturas
+    data.frame("Factura" = ifelse(is.na(inv$number), paste("Archivo nº", seq_len(nrow(inv))), inv$number),
                "Meses" = vapply(strsplit(inv$months, ", "), function(x) paste(mes_label(x[nzchar(x)]), collapse = ", "), ""),
                "Total" = ifelse(is.na(inv$total), "", eur(inv$total)),
                "Estado" = ifelse(inv$ok, "Leída", paste("No usada:", inv$msg)), check.names = FALSE)
   }, striped = TRUE, spacing = "s", align = "l")
 
-  output$csv <- downloadHandler(
-    filename = function() "resumen_facturas_ecoenergies.csv",
-    content = function(file) {
-      m <- monthly()
-      out <- data.frame(mes = m$month, total_con_iva = round(m$total_iva, 2), termino_fijo = m$fijo, calor = m$calor,
-                        frio_kwh = m$frio, frio_m3 = m$volumen, otros = m$otro, descuento = m$descuento,
-                        pct_fijo = round(m$pct_fijo, 1), exceso_32_5_sin_iva = round(m$exceso_325, 2),
-                        exceso_40_sin_iva = round(m$exceso_40, 2), eur_kwh_calor = round(m$precio_calor, 6),
-                        eur_kwh_frio = round(m$precio_frio, 6), eur_m3 = round(m$precio_volumen, 6),
-                        facturas = m$n_facturas)
-      utils::write.csv2(out, file, row.names = FALSE, fileEncoding = "UTF-8")
-    }
-  )
+  # downloadHandler no funciona en shinylive: R prepara el CSV y el navegador
+  # lo descarga (www/pdftext.js, mensaje "download_csv").
+  observeEvent(input$csv, {
+    m <- monthly()
+    out <- data.frame(mes = m$month, total_con_iva = round(m$total_iva, 2), termino_fijo = m$fijo, calor = m$calor,
+                      frio_kwh = m$frio, frio_m3 = m$volumen, otros = m$otro, descuento = m$descuento,
+                      pct_fijo = round(m$pct_fijo, 1), exceso_32_5_sin_iva = round(m$exceso_325, 2),
+                      exceso_40_sin_iva = round(m$exceso_40, 2), eur_kwh_calor = round(m$precio_calor, 6),
+                      eur_kwh_frio = round(m$precio_frio, 6), eur_m3 = round(m$precio_volumen, 6),
+                      facturas = m$n_facturas)
+    con <- textConnection("csv_txt", "w", local = TRUE)
+    utils::write.csv2(out, con, row.names = FALSE, na = "")
+    close(con)
+    session$sendCustomMessage("download_csv", list(name = "resumen_facturas_ecoenergies.csv",
+                                                   content = paste(csv_txt, collapse = "\r\n")))
+  })
 }
 
 shinyApp(ui, server)

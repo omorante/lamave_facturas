@@ -234,9 +234,13 @@ monthly_summary <- function(items, invoices) {
   if (!nrow(items)) return(NULL)
   months <- sort(unique(items$month))
   s <- function(m, k) sum(items$amount[items$month == m & items$kind %in% k])
+  # Precio unitario que figura en la factura (aparece aunque el consumo sea 0),
+  # ponderado por consumo si hay varias líneas en el mes.
   wprice <- function(m, k) {
-    x <- items[items$month == m & items$kind == k & !is.na(items$qty) & items$qty > 0, ]
-    if (!nrow(x)) NA_real_ else sum(x$amount) / sum(x$qty)
+    x <- items[items$month == m & items$kind == k & !is.na(items$price), ]
+    if (!nrow(x)) return(NA_real_)
+    q <- ifelse(is.na(x$qty), 0, x$qty)
+    if (sum(q) > 0) sum(x$price * q) / sum(q) else mean(x$price)
   }
   iva <- setNames(invoices$iva_rate, invoices$number)
   df <- data.frame(

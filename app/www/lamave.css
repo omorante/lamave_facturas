@@ -64,6 +64,7 @@ a { color: var(--accent-color); }
 .card.main { background: var(--accent-color); border-top-color: var(--heading-color); }
 .card.main .k, .card.main .v, .card.main .s { color: var(--background-color); }
 
+.note { font-size: 13px; margin: 10px 0 0; padding: 8px 12px; background: var(--surface-color); }
 .table-scroll { overflow-x: auto; }
 table.table { font-size: 13px; background: var(--surface-color); }
 table.table > thead > tr > th { background: var(--surface-2); border-bottom: 1px solid var(--accent-color); }
