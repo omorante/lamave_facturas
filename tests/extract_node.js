@@ -1,14 +1,15 @@
 // Extrae el texto de los PDF de una carpeta con el mismo código que usa el
 // navegador (app/www/pdftext.js) y lo guarda en JSON: [{name, text, error}].
-// Requiere pdfjs-dist 3.11.174 instalado fuera del repo (NODE_PATH).
-// Uso: NODE_PATH=<node_modules> node tests/extract_node.js <carpeta> <salida.json>
+// Requiere pdfjs-dist 4.10.38 instalado fuera del repo.
+// Uso: PDFJS_DIST=<ruta a node_modules/pdfjs-dist> node tests/extract_node.js <carpeta> <salida.json>
 const fs = require("fs");
 const path = require("path");
-const pdfjs = require("pdfjs-dist/legacy/build/pdf.js");
+const { pathToFileURL } = require("url");
 const { pdfText } = require(path.join(__dirname, "..", "app", "www", "pdftext.js"));
 
 (async () => {
   const [dir, out] = process.argv.slice(2);
+  const pdfjs = await import(pathToFileURL(path.join(process.env.PDFJS_DIST, "legacy", "build", "pdf.mjs")).href);
   const files = fs.readdirSync(dir).filter(f => /\.pdf$/i.test(f)).sort();
   const res = [];
   for (const f of files) {

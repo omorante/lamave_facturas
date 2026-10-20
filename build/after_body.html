@@ -1,0 +1,16 @@
+    <script>
+      // Quita la pantalla de carga cuando la app (dentro del iframe) ya está conectada
+      (function () {
+        var box = document.getElementById("lamave-loading");
+        var timer = setInterval(function () {
+          var f = document.querySelector("#root iframe");
+          var w = f && f.contentWindow;
+          if (w && w.Shiny && w.Shiny.shinyapp && w.Shiny.shinyapp.isConnected && w.Shiny.shinyapp.isConnected()) {
+            clearInterval(timer);
+            box.classList.add("done");
+            setTimeout(function () { box.remove(); }, 450);
+          }
+        }, 250);
+        setTimeout(function () { var s = document.getElementById("lamave-slow"); if (s) s.hidden = false; }, 25000);
+      })();
+    </script>

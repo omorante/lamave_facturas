@@ -11,6 +11,8 @@ on.exit(httpuv::stopAllServers(), add = TRUE)
 
 b <- chromote::ChromoteSession$new(width = 1200, height = 900)
 b$Page$navigate(sprintf("http://127.0.0.1:%d/", port))
+Sys.sleep(1.5)
+b$screenshot("tests/out/carga.png", wait_ = TRUE)
 
 js <- function(expr) {
   b$Runtime$evaluate(sprintf("(() => { const f = document.querySelector('iframe'); const d = f ? f.contentDocument : document; const w = f ? f.contentWindow : window; %s })()", expr))$result$value
@@ -48,10 +50,12 @@ err <- js("const e = d.querySelector('.shiny-output-error-validation'); return e
 if (nzchar(err)) cat("ERROR:", err, "\n")
 dl <- normalizePath("tests/out")
 b$Browser$setDownloadBehavior(behavior = "allow", downloadPath = dl)
-js("d.querySelector('#csv').click(); return true;")
-Sys.sleep(4)
-csv <- file.path(dl, "resumen_facturas_ecoenergies.csv")
-cat("CSV descargado:", file.exists(csv), if (file.exists(csv)) sprintf("(%d filas)", length(readLines(csv, warn = FALSE)) - 1) else "", "\n")
+for (fmt in c("xlsx", "csv")) {
+  js(sprintf("d.querySelector('#%s').click(); return true;", fmt))
+  Sys.sleep(3)
+  f <- file.path(dl, paste0("resumen_facturas_ecoenergies.", fmt))
+  cat(sprintf("%s descargado: %s (%s bytes)\n", toupper(fmt), file.exists(f), if (file.exists(f)) file.size(f) else 0))
+}
 cat("Cabecera tabla de archivos:", js("const t = d.querySelectorAll('table'); return Array.from(t[t.length - 1].querySelectorAll('th')).map(x => x.innerText).join(' | ');"), "\n")
 cat("Meses sin precio de frío en la tabla:", js("const t = d.querySelectorAll('table')[0]; const h = Array.from(t.querySelectorAll('th')).map(x => x.innerText); const i = h.indexOf('€/kWh frío'); return i < 0 ? 'sin columna' : Array.from(t.querySelectorAll('tbody tr')).slice(0, -1).filter(r => !r.children[i].innerText.trim()).length;"), "\n")
 cat("Archivos no usados:", js("return Array.from(d.querySelectorAll('td')).filter(t => t.innerText.startsWith('No usada')).length;"), "\n")

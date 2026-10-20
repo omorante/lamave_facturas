@@ -32,7 +32,7 @@ ui <- fluidPage(
       a(class = "back noprint", href = "https://lamave.es", "← Volver a lamave.es")
     ),
     div(class = "hero",
-      section("Grupo Ecoenergies", "Herramienta"),
+      section("Grupo Ecoenergies", "Calculadora del término fijo"),
       h1("Resumen de tus facturas de Ecoenergies"),
       p(class = "lead", "Cuánto pagas de término fijo y cuánto supera los límites del RD 736/2020.")
     ),
@@ -114,7 +114,8 @@ server <- function(input, output, session) {
         )
       ),
       div(class = "noprint", style = "margin-top:14px;",
-        actionButton("csv", "Descargar tabla (CSV)", icon = icon("download"), class = "btn-lamave"),
+        actionButton("xlsx", "Descargar tabla (Excel)", icon = icon("file-excel"), class = "btn-lamave"),
+        actionButton("csv", "CSV", icon = icon("download"), class = "btn-lamave"),
         tags$button(class = "btn btn-lamave", onclick = "window.print()", icon("print"), "Imprimir o guardar en PDF")
       ),
       section("Mes a mes", "Cuánto pagas"),
@@ -136,6 +137,7 @@ server <- function(input, output, session) {
         p("El exceso es la diferencia entre el fijo facturado y el que correspondería al 32,5 % (o al 40 %) del coste con el mismo consumo. Se suman todos los meses, también los que quedan por debajo del límite, que restan. Si hubo descuentos, se aplican en proporción."),
         p("Cada factura se comprueba: sus conceptos tienen que sumar la base imponible, y la base más el IVA, el total. Si no cuadra, la factura no se usa y se indica el motivo. Si subes dos veces la misma factura, se cuenta una sola vez."),
         p("Solo se tiene en cuenta lo facturado por Ecoenergies. Lo que se paga a través de la comunidad (mantenimiento de la subestación y electricidad del bombeo) no aparece en estas facturas."),
+        p("Privacidad: tus facturas se leen en tu navegador y no se envían a ningún sitio. El informe no incluye tu nombre, tu dirección ni los números de factura. La web no usa cookies ni analítica. Está alojada en GitHub Pages; como cualquier servidor web, GitHub registra la dirección IP de las visitas por seguridad."),
         p(tags$b("Es una estimación orientativa, no un dictamen jurídico."),
           " Ecoenergies sostiene que el RD 736/2020 no se aplica a su servicio, y la sentencia solo obliga en el caso de quien reclamó. Revisa los datos con tus facturas antes de usarlos en una reclamación.")
       ),
@@ -231,29 +233,31 @@ server <- function(input, output, session) {
 
   output$t_arch <- renderTable({
     inv <- parsed()$invoices
-    # Sin nombres de archivo: pueden llevar el nombre o la dirección de quien sube las facturas
-    data.frame("Factura" = ifelse(is.na(inv$number), paste("Archivo nº", seq_len(nrow(inv))), inv$number),
+    # Sin nombres de archivo ni números de factura: el informe se puede compartir
+    # sin datos que permitan identificar a quien lo genera.
+    data.frame("Archivo" = paste("nº", seq_len(nrow(inv))),
                "Meses" = vapply(strsplit(inv$months, ", "), function(x) paste(mes_label(x[nzchar(x)]), collapse = ", "), ""),
                "Total" = ifelse(is.na(inv$total), "", eur(inv$total)),
                "Estado" = ifelse(inv$ok, "Leída", paste("No usada:", inv$msg)), check.names = FALSE)
   }, striped = TRUE, spacing = "s", align = "l")
 
-  # downloadHandler no funciona en shinylive: R prepara el CSV y el navegador
-  # lo descarga (www/pdftext.js, mensaje "download_csv").
-  observeEvent(input$csv, {
+  # downloadHandler no funciona en shinylive: R manda la tabla y el navegador
+  # genera el Excel o el CSV (www/pdftext.js, mensaje "download_table").
+  send_table <- function(format) {
     m <- monthly()
-    out <- data.frame(mes = m$month, total_con_iva = round(m$total_iva, 2), termino_fijo = m$fijo, calor = m$calor,
-                      frio_kwh = m$frio, frio_m3 = m$volumen, otros = m$otro, descuento = m$descuento,
-                      pct_fijo = round(m$pct_fijo, 1), exceso_32_5_sin_iva = round(m$exceso_325, 2),
-                      exceso_40_sin_iva = round(m$exceso_40, 2), eur_kwh_calor = round(m$precio_calor, 6),
-                      eur_kwh_frio = round(m$precio_frio, 6), eur_m3 = round(m$precio_volumen, 6),
-                      facturas = m$n_facturas)
-    con <- textConnection("csv_txt", "w", local = TRUE)
-    utils::write.csv2(out, con, row.names = FALSE, na = "")
-    close(con)
-    session$sendCustomMessage("download_csv", list(name = "resumen_facturas_ecoenergies.csv",
-                                                   content = paste(csv_txt, collapse = "\r\n")))
-  })
+    out <- list(
+      "Mes" = m$month, "Total con IVA (€)" = round(m$total_iva, 2), "Término fijo (€)" = m$fijo,
+      "Calor (€)" = m$calor, "Frío kWh (€)" = m$frio, "Frío m3 (€)" = m$volumen, "Otros (€)" = m$otro,
+      "Descuento (€)" = m$descuento, "% fijo" = round(m$pct_fijo, 1),
+      "Exceso 32,5 % sin IVA (€)" = round(m$exceso_325, 4), "Exceso 40 % sin IVA (€)" = round(m$exceso_40, 4),
+      "Precio calor (€/kWh)" = round(m$precio_calor, 6), "Precio frío (€/kWh)" = round(m$precio_frio, 6),
+      "Precio frío (€/m3)" = round(m$precio_volumen, 6), "Facturas en el mes" = m$n_facturas)
+    session$sendCustomMessage("download_table", list(
+      format = format, name = paste0("resumen_facturas_ecoenergies.", format), sheet = "Resumen",
+      header = names(out), cols = lapply(unname(out), as.list)))
+  }
+  observeEvent(input$xlsx, send_table("xlsx"))
+  observeEvent(input$csv, send_table("csv"))
 }
 
 shinyApp(ui, server)

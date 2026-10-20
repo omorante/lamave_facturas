@@ -32,7 +32,7 @@ jobs:
       - name: Instalar shinylive
         run: Rscript -e 'install.packages(c("shinylive", "shiny"))'
       - name: Exportar la app con shinylive
-        run: Rscript -e 'shinylive::export("app", "site")'
+        run: Rscript build.R
       - name: Dominio propio (opcional)
         if: ${{ vars.PAGES_CNAME != '' }}
         run: echo "${{ vars.PAGES_CNAME }}" > site/CNAME
