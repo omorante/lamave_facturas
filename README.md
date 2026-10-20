@@ -5,17 +5,13 @@ Lee las facturas de Ecoenergies en PDF y calcula cuánto pesa el término fijo y
 cuánto supera los límites del RD 736/2020 (fijo entre el 25 % y el 40 %; 32,5 %
 como referencia, el valor que aplicó la Sentencia 262/2024).
 
-Evolución de [`ecoenergies_repgen`](https://github.com/omorante/ecoenergies_repgen),
-reescrita para funcionar en el navegador con [shinylive](https://posit-dev.github.io/r-shinylive/).
+Funciona en el navegador con [shinylive](https://posit-dev.github.io/r-shinylive/).
 
 ## Privacidad
 
 Todo se ejecuta en el navegador de quien la usa (R compilado a WebAssembly).
 Las facturas no se suben a ningún servidor. El servidor solo entrega archivos
 estáticos. Las fuentes van incluidas en la app, sin llamadas a Google Fonts.
-
-**No subas nunca facturas a este repositorio.** `.gitignore` excluye `*.pdf`,
-`*.zip`, `*.json` y `tests/out/`.
 
 ## Cómo funciona
 
@@ -32,7 +28,7 @@ estáticos. Las fuentes van incluidas en la app, sin llamadas a Google Fonts.
 
 El exceso suma las diferencias de todos los meses, también las negativas.
 Equivale a comparar el fijo total del periodo con el admisible para todo el
-consumo del periodo, que es el cálculo de la demanda de referencia.
+consumo del periodo.
 
 ## Desarrollo
 
