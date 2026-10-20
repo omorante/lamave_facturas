@@ -21,14 +21,16 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
-      # Binarios precompilados para Ubuntu 24.04: evita compilar desde el código fuente
-      RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/__linux__/noble/latest
+      # renv es para el desarrollo local (incluye paquetes de prueba).
+      # Para generar la web solo hacen falta shinylive y shiny, en binario.
+      RENV_ACTIVATE_PROJECT: "FALSE"
     steps:
       - uses: actions/checkout@v5
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
-      - uses: r-lib/actions/setup-renv@v2
+      - name: Instalar shinylive
+        run: Rscript -e 'install.packages(c("shinylive", "shiny"))'
       - name: Exportar la app con shinylive
         run: Rscript -e 'shinylive::export("app", "site")'
       - name: Dominio propio (opcional)
