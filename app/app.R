@@ -85,6 +85,13 @@ server <- function(input, output, session) {
     n_excl <- sum(!inv$ok)
     pfix <- 100 * sum(m$fijo) / sum(m$bruto)
     over40 <- sum(m$pct_fijo > 40, na.rm = TRUE)
+    # Media mensual sin los meses incompletos (alta o baja a mitad de mes: fijo prorrateado)
+    full <- m$fijo >= 0.8 * stats::median(m$fijo)
+    mf <- m[full, , drop = FALSE]
+    avg_total <- mean(mf$total_iva)
+    avg_fijo <- mean(mf$fijo * ifelse(mf$bruto > 0, mf$neto / mf$bruto, 1) * (1 + mf$iva_rate / 100))
+    top <- which.max(m$total_iva)
+    has_frio <- any(m$frio + m$volumen > 0)
 
     tagList(
       section("Resultado", "Resumen"),
@@ -117,6 +124,11 @@ server <- function(input, output, session) {
         tags$button(class = "btn btn-lamave", onclick = "window.print()", icon("print"), "Imprimir o guardar en PDF")
       ),
       section("Mes a mes", "Cuánto pagas"),
+      p(HTML(sprintf("De media pagas <b>%s al mes</b> a Ecoenergies, IVA incluido: %s de término fijo y %s de consumo. El mes más caro fue %s, con %s.%s",
+                     eur(avg_total), eur(avg_fijo), eur(avg_total - avg_fijo), mes_label(m$month[top]), eur(m$total_iva[top]),
+                     if (sum(!full) == 1) sprintf(" Para la media no se cuenta %s, un mes incompleto con el término fijo prorrateado.", mes_label(m$month[!full]))
+                     else if (sum(!full) > 1) sprintf(" Para la media no se cuentan %s, meses incompletos con el término fijo prorrateado.", paste(mes_label(m$month[!full]), collapse = ", "))
+                     else ""))),
       plotOutput("p_coste", height = "320px"),
       section("Término fijo", "Peso sobre el total"),
       p("La franja verde es lo que indica el RD 736/2020: un término fijo entre el 25 % y el 40 % del coste. La línea discontinua es el 32,5 %, el punto medio que aplicó la Sentencia 262/2024."),
@@ -124,6 +136,7 @@ server <- function(input, output, session) {
       section("Término fijo", "Pagado de más (acumulado)"),
       plotOutput("p_exceso", height = "280px"),
       section("Término variable", "Precio de la energía"),
+      if (has_frio) p("El frío se cobra por la energía (€/kWh) y, aparte, por el volumen de agua que circula (€/m3). La línea discontinua suma las dos partes y muestra lo que cuesta de verdad cada kWh de frío. Solo aparece en los meses con al menos 10 kWh de frío."),
       plotOutput("p_precio", height = "280px"),
       section("Detalle", "Tabla por mes"),
       p(style = "font-size:13px;", "Importes sin IVA, salvo el total."),
@@ -170,7 +183,7 @@ server <- function(input, output, session) {
 
   output$p_pct <- renderPlot({
     m <- monthly(); setup()
-    x <- barplot(m$pct_fijo, border = NA, ylim = c(0, 100), axes = FALSE, space = .25, col = NA, ylab = "% del coste sin IVA")
+    x <- barplot(m$pct_fijo, border = NA, ylim = c(0, 100), axes = FALSE, space = .25, col = NA, ylab = "% fijo sobre el coste (sin IVA)")
     rect(par("usr")[1], 25, par("usr")[2], 40, col = adjustcolor(COL[["banda"]], .28), border = NA)
     grid_y(c(20, 60, 80, 100))
     barplot(m$pct_fijo, col = COL[["fijo"]], border = NA, add = TRUE, axes = FALSE, space = .25)
@@ -193,18 +206,22 @@ server <- function(input, output, session) {
 
   output$p_precio <- renderPlot({
     m <- monthly()
-    y <- c(m$precio_calor, m$precio_frio)
+    y <- c(m$precio_calor, m$precio_frio, m$precio_frio_total)
     validate(need(any(!is.na(y)), "Las facturas no indican el precio por kWh."))
     setup(); x <- seq_len(nrow(m))
-    ticks <- pretty(c(0, max(y, na.rm = TRUE) * 1.15))
+    ticks <- pretty(c(0, max(y, na.rm = TRUE) * 1.2))
     plot(x, m$precio_calor, type = "n", ylim = range(ticks), axes = FALSE, xlab = "", ylab = "€/kWh (sin IVA)")
     grid_y(ticks)
     lines(x, m$precio_calor, type = "b", pch = 16, cex = .8, col = COL[["calor"]], lwd = 2)
     has_frio <- any(!is.na(m$precio_frio))
+    has_total <- any(!is.na(m$precio_frio_total))
     if (has_frio) lines(x, m$precio_frio, type = "b", pch = 16, cex = .8, col = COL[["frio"]], lwd = 2)
+    if (has_total) lines(x, m$precio_frio_total, type = "b", pch = 1, cex = .8, col = COL[["frio"]], lwd = 2, lty = 2)
     axis(2, at = ticks, las = 1, cex.axis = .85, lwd = 0); axis_months(x, m$month)
-    legend("topleft", c("Calor", if (has_frio) "Frío"), col = c(COL[["calor"]], if (has_frio) COL[["frio"]]),
-           lwd = 2, pch = 16, bty = "n", horiz = TRUE, cex = .9, text.width = max(strwidth(c("Calor", "Frío"))) * 1.6)
+    labs <- c("Calor", if (has_frio) "Frío (energía)", if (has_total) "Frío con volumen")
+    legend("topleft", labs, col = c(COL[["calor"]], if (has_frio) COL[["frio"]], if (has_total) COL[["frio"]]),
+           lwd = 2, lty = c(1, if (has_frio) 1, if (has_total) 2), pch = c(16, if (has_frio) 16, if (has_total) 1),
+           bty = "n", horiz = TRUE, cex = .9, text.width = max(strwidth(labs)) * 1.15)
   }, bg = "transparent")
 
   month_table <- function(m) {
@@ -249,7 +266,8 @@ server <- function(input, output, session) {
       "Descuento (€)" = m$descuento, "% fijo" = round(m$pct_fijo, 1),
       "Exceso 32,5 % sin IVA (€)" = round(m$exceso_325, 4), "Exceso 40 % sin IVA (€)" = round(m$exceso_40, 4),
       "Precio calor (€/kWh)" = round(m$precio_calor, 6), "Precio frío (€/kWh)" = round(m$precio_frio, 6),
-      "Precio frío (€/m3)" = round(m$precio_volumen, 6), "Facturas en el mes" = m$n_facturas)
+      "Precio frío (€/m3)" = round(m$precio_volumen, 6),
+      "Frío con volumen (€/kWh)" = round(m$precio_frio_total, 6), "Facturas en el mes" = m$n_facturas)
     session$sendCustomMessage("download_table", list(
       format = format, name = paste0("resumen_facturas_ecoenergies.", format), sheet = "Resumen",
       header = names(out), cols = lapply(unname(out), as.list)))

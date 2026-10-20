@@ -258,8 +258,12 @@ monthly_summary <- function(items, invoices) {
     precio_calor = vapply(months, wprice, 0, k = "calor"),
     precio_frio = vapply(months, wprice, 0, k = "frio"),
     precio_volumen = vapply(months, wprice, 0, k = "volumen"),
+    kwh_frio = vapply(months, function(m) sum(items$qty[items$month == m & items$kind == "frio"], na.rm = TRUE), 0),
     stringsAsFactors = FALSE, row.names = NULL
   )
+  # Coste real de cada kWh de frío: energía más volumen de agua. Solo con consumo
+  # suficiente; con pocos kWh el redondeo de los importes lo distorsiona.
+  df$precio_frio_total <- ifelse(df$kwh_frio >= 10, (df$frio + df$volumen) / df$kwh_frio, NA_real_)
   df$variable <- df$calor + df$frio + df$volumen + df$otro
   df$bruto <- df$fijo + df$variable
   df$neto <- df$bruto + df$descuento
