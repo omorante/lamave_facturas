@@ -1,4 +1,4 @@
-# Resumen de facturas de Ecoenergies · LAMAVE
+# Calculadora del término fijo de Ecoenergies · LAMAVE
 
 Herramienta web de LAMAVE (La Asociación Vecinal de La Marina del Prat Vermell).
 Lee las facturas de Ecoenergies en PDF y calcula cuánto pesa el término fijo y

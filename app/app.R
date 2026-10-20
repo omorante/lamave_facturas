@@ -17,12 +17,11 @@ all_months <- function(from, to) {
 section <- function(label, title) div(class = "section-title", h2(label), div(title))
 
 ui <- fluidPage(
-  title = "Resumen de facturas de Ecoenergies · LAMAVE",
+  title = "Calculadora del término fijo de Ecoenergies · LAMAVE",
   lang = "es",
   tags$head(
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1"),
     tags$link(rel = "stylesheet", href = "lamave.css"),
-    tags$script(src = "vendor/pdf.min.js"),
     tags$script(src = "vendor/jszip.min.js"),
     tags$script(src = "pdftext.js")
   ),
@@ -32,9 +31,8 @@ ui <- fluidPage(
       a(class = "back noprint", href = "https://lamave.es", "← Volver a lamave.es")
     ),
     div(class = "hero",
-      section("Grupo Ecoenergies", "Calculadora del término fijo"),
-      h1("Resumen de tus facturas de Ecoenergies"),
-      p(class = "lead", "Cuánto pagas de término fijo y cuánto supera los límites del RD 736/2020.")
+      div(class = "section-title", h2("Ecoenergies"), h1("Calculadora del término fijo")),
+      p(class = "lead", "Sube tus facturas y descubre cuánto pagas de término fijo y cuánto supera los límites del RD 736/2020.")
     ),
     div(class = "box noprint",
       h3("Tus facturas no salen de tu ordenador"),

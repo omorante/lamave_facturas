@@ -29,7 +29,8 @@ a { color: var(--accent-color); }
 .logo .mave { font-family: var(--heading-font); font-size: 38px; font-weight: 900; }
 .top .back { font-size: 14px; }
 
-.hero h1 { font-size: 36px; font-weight: 900; margin: 6px 0 6px; }
+.hero .section-title { margin-top: 8px; }
+.hero .section-title h1 { font-family: var(--heading-font); font-size: 34px; font-weight: 900; text-transform: uppercase; color: var(--heading-color); margin: 4px 0 0; }
 .hero p.lead { font-size: 17px; font-weight: 300; font-style: italic; margin-bottom: 18px; }
 
 /* Títulos de sección como en lamave.es */
@@ -74,7 +75,7 @@ table.table > thead > tr > th { background: var(--surface-2); border-bottom: 1px
 .foot { border-top: 1px solid var(--surface-2); margin-top: 36px; padding-top: 10px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .shiny-output-error-validation { color: var(--accent-color); font-weight: 600; }
 
-@media (max-width: 600px) { .hero h1 { font-size: 28px; } .card .v { font-size: 22px; } }
+@media (max-width: 600px) { .hero .section-title h1 { font-size: 26px; } .card .v { font-size: 22px; } }
 @media print {
   .noprint, .upload, .shiny-notification, .top .back { display: none !important; }
   body { background: #fff; }

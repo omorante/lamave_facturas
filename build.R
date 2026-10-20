@@ -4,7 +4,7 @@ read <- function(f) paste(readLines(file.path("build", f), encoding = "UTF-8", w
 
 unlink("site", recursive = TRUE)
 shinylive::export("app", "site", template_params = list(
-  title = "Resumen de facturas de Ecoenergies · LAMAVE",
+  title = "Calculadora del término fijo de Ecoenergies · LAMAVE",
   include_in_head = read("head.html"),
   include_before_body = read("before_body.html"),
   include_after_body = read("after_body.html")
