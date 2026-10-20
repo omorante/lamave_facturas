@@ -1,6 +1,4 @@
 # Genera la web estática con shinylive y la publica en GitHub Pages.
-# Para usar un subdominio (p. ej. facturas.lamave.es), crea la variable del
-# repositorio PAGES_CNAME con ese dominio y añade el registro DNS CNAME.
 name: Publicar en GitHub Pages
 
 on:
@@ -33,9 +31,6 @@ jobs:
         run: Rscript -e 'install.packages(c("shinylive", "shiny"))'
       - name: Exportar la app con shinylive
         run: Rscript build.R
-      - name: Dominio propio (opcional)
-        if: ${{ vars.PAGES_CNAME != '' }}
-        run: echo "${{ vars.PAGES_CNAME }}" > site/CNAME
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
