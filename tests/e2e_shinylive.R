@@ -58,6 +58,7 @@ for (fmt in c("xlsx", "csv")) {
 }
 cat("Cabecera tabla de archivos:", js("const t = d.querySelectorAll('table'); return Array.from(t[t.length - 1].querySelectorAll('th')).map(x => x.innerText).join(' | ');"), "\n")
 cat("Meses sin precio de frío en la tabla:", js("const t = d.querySelectorAll('table')[0]; const h = Array.from(t.querySelectorAll('th')).map(x => x.innerText); const i = h.indexOf('€/kWh frío'); return i < 0 ? 'sin columna' : Array.from(t.querySelectorAll('tbody tr')).slice(0, -1).filter(r => !r.children[i].innerText.trim()).length;"), "\n")
+cat("Texto del frío:", js("const p = Array.from(d.querySelectorAll('p')).find(x => x.innerText.startsWith('El frío se cobra')); return p ? p.innerText : 'sin texto';"), "\n")
 cat("Archivos no usados:", js("return Array.from(d.querySelectorAll('td')).filter(t => t.innerText.startsWith('No usada')).length;"), "\n")
 
 b$Emulation$setDeviceMetricsOverride(width = 1200, height = 1400, deviceScaleFactor = 1, mobile = FALSE)
