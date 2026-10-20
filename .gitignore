@@ -1,0 +1,14 @@
+# Nunca subir facturas ni resultados con datos personales
+*.pdf
+*.PDF
+*.zip
+*.json
+tests/out/
+
+# Web generada (la crea la GitHub Action)
+site/
+
+.Rhistory
+.Rproj.user/
+.DS_Store
+!renv/settings.json
